@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26228.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCV", "OpenCV\OpenCV.vcxproj", "{159C1130-3347-40A7-A228-CE7F89DAF26D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Background", "Background\Background.vcxproj", "{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{159C1130-3347-40A7-A228-CE7F89DAF26D}.Release|x64.Build.0 = Release|x64
 		{159C1130-3347-40A7-A228-CE7F89DAF26D}.Release|x86.ActiveCfg = Release|Win32
 		{159C1130-3347-40A7-A228-CE7F89DAF26D}.Release|x86.Build.0 = Release|Win32
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Debug|x64.ActiveCfg = Debug|x64
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Debug|x64.Build.0 = Debug|x64
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Debug|x86.ActiveCfg = Debug|Win32
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Debug|x86.Build.0 = Debug|Win32
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x64.ActiveCfg = Release|x64
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x64.Build.0 = Release|x64
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x86.ActiveCfg = Release|Win32
+		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
