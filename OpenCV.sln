@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCV", "OpenCV\OpenCV.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Background", "Background\Background.vcxproj", "{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tracking", "Tracking\Tracking.vcxproj", "{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x64.Build.0 = Release|x64
 		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x86.ActiveCfg = Release|Win32
 		{DA6EDE7D-CB65-446B-8B67-75184D6CABFF}.Release|x86.Build.0 = Release|Win32
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Debug|x64.ActiveCfg = Debug|x64
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Debug|x64.Build.0 = Debug|x64
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Debug|x86.ActiveCfg = Debug|Win32
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Debug|x86.Build.0 = Debug|Win32
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Release|x64.ActiveCfg = Release|x64
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Release|x64.Build.0 = Release|x64
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Release|x86.ActiveCfg = Release|Win32
+		{6CE1ED6F-A8BB-48AD-BC5A-3C8F08F817B8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
