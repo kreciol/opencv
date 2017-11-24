@@ -18,15 +18,17 @@ using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
 //these will be changed using trackbars
-int H_MIN = 0;
-int H_MAX = 256;
-int S_MIN = 0;
-int S_MAX = 256;
-int V_MIN = 0;
+int H_MIN = 20;
+int H_MAX = 160;
+int S_MIN = 100;
+int S_MAX = 255;
+int V_MIN = 200;
 int V_MAX = 256;
+int MAX = 256;
+
 //default capture width and height
-const int FRAME_WIDTH = 1280;
-const int FRAME_HEIGHT = 720;
+const int FRAME_WIDTH = 1920;
+const int FRAME_HEIGHT = 1080;
 //max number of objects to be detected in frame
 const int MAX_NUM_OBJECTS = 50;
 //minimum and maximum object area
@@ -72,12 +74,12 @@ void createTrackbars() {
 	//the max value the trackbar can move (eg. H_HIGH), 
 	//and the function that is called whenever the trackbar is moved(eg. on_trackbar)
 	//                                  ---->    ---->     ---->      
-	createTrackbar("H_MIN", trackbarWindowName, &H_MIN, H_MAX, on_trackbar);
-	createTrackbar("H_MAX", trackbarWindowName, &H_MAX, H_MAX, on_trackbar);
-	createTrackbar("S_MIN", trackbarWindowName, &S_MIN, S_MAX, on_trackbar);
-	createTrackbar("S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar);
-	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar);
-	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar);
+	createTrackbar("H_MIN", trackbarWindowName, &H_MIN, MAX, on_trackbar);
+	createTrackbar("H_MAX", trackbarWindowName, &H_MAX, MAX, on_trackbar);
+	createTrackbar("S_MIN", trackbarWindowName, &S_MIN, MAX, on_trackbar);
+	createTrackbar("S_MAX", trackbarWindowName, &S_MAX, MAX, on_trackbar);
+	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, MAX, on_trackbar);
+	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, MAX, on_trackbar);
 
 
 }
@@ -172,12 +174,26 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
 }
+
+
+void thresholdImage(Mat &thresh, int maximum, int minimum, bool hue) {
+	Mat temp;
+	
+	threshold(thresh, temp, maximum, 0, THRESH_TOZERO_INV);
+	threshold(temp, thresh, minimum, 255, THRESH_BINARY);
+
+	if (hue)
+	{
+		bitwise_not(thresh, thresh);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	//some boolean variables for different functionality within this
 	//program
 	bool trackObjects = true;
-	bool useMorphOps = false;
+	bool useMorphOps = true;
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed;
 	//matrix storage for HSV image
@@ -204,21 +220,40 @@ int main(int argc, char* argv[])
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
-		inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+		//inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+
+
+		vector<Mat> channel;
+		Mat laser;
+
+		split(HSV, channel);
+		
+		thresholdImage(channel[0], H_MAX, H_MIN, true);
+		thresholdImage(channel[1], S_MAX, S_MIN, false);
+		thresholdImage(channel[2], V_MAX, V_MIN, false);
+
+		merge(channel, threshold);
+
+		bitwise_and(channel[0], channel[2], laser);
+
+		bitwise_and(channel[1], laser, laser);
+
+
 		//perform morphological operations on thresholded image to eliminate noise
 		//and emphasize the filtered object(s)
-		if (useMorphOps)
-			morphOps(threshold);
+		//if (useMorphOps)
+		//	morphOps(laser);
 		//pass in thresholded frame to our object tracking function
 		//this function will return the x and y coordinates of the
 		//filtered object
 		if (trackObjects)
-			trackFilteredObject(x, y, threshold, cameraFeed);
+			trackFilteredObject(x, y, laser, cameraFeed);
 
 		//show frames 
 		imshow(windowName2, threshold);
 		imshow(windowName, cameraFeed);
 		imshow(windowName1, HSV);
+		imshow("Laser", laser);
 
 
 		//delay 30ms so that screen can refresh.
