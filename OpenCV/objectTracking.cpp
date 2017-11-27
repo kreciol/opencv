@@ -27,12 +27,12 @@ int V_MAX = 256;
 int MAX = 256;
 
 //default capture width and height
-const int FRAME_WIDTH = 1920;
-const int FRAME_HEIGHT = 1080;
+const int FRAME_WIDTH = 1280;
+const int FRAME_HEIGHT = 720;
 //max number of objects to be detected in frame
 const int MAX_NUM_OBJECTS = 50;
 //minimum and maximum object area
-const int MIN_OBJECT_AREA = 20 * 20;
+const int MIN_OBJECT_AREA = 9;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 //names that will appear at the top of each window
 const string windowName = "Original Image";
@@ -93,16 +93,16 @@ void drawObject(int x, int y, Mat &frame) {
 	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
 
 	circle(frame, Point(x, y), 20, Scalar(0, 255, 0), 2);
-	if (y - 25>0)
+	if (y - 25 > 0)
 		line(frame, Point(x, y), Point(x, y - 25), Scalar(0, 255, 0), 2);
 	else line(frame, Point(x, y), Point(x, 0), Scalar(0, 255, 0), 2);
-	if (y + 25<FRAME_HEIGHT)
+	if (y + 25 < FRAME_HEIGHT)
 		line(frame, Point(x, y), Point(x, y + 25), Scalar(0, 255, 0), 2);
 	else line(frame, Point(x, y), Point(x, FRAME_HEIGHT), Scalar(0, 255, 0), 2);
-	if (x - 25>0)
+	if (x - 25 > 0)
 		line(frame, Point(x, y), Point(x - 25, y), Scalar(0, 255, 0), 2);
 	else line(frame, Point(x, y), Point(0, y), Scalar(0, 255, 0), 2);
-	if (x + 25<FRAME_WIDTH)
+	if (x + 25 < FRAME_WIDTH)
 		line(frame, Point(x, y), Point(x + 25, y), Scalar(0, 255, 0), 2);
 	else line(frame, Point(x, y), Point(FRAME_WIDTH, y), Scalar(0, 255, 0), 2);
 
@@ -143,7 +143,7 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 	if (hierarchy.size() > 0) {
 		int numObjects = hierarchy.size();
 		//if number of objects greater than MAX_NUM_OBJECTS we have a noisy filter
-		if (numObjects<MAX_NUM_OBJECTS) {
+		if (numObjects < MAX_NUM_OBJECTS) {
 			for (int index = 0; index >= 0; index = hierarchy[index][0]) {
 
 				Moments moment = moments((cv::Mat)contours[index]);
@@ -153,21 +153,24 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 				//if the area is the same as the 3/2 of the image size, probably just a bad filter
 				//we only want the object with the largest area so we safe a reference area each
 				//iteration and compare it to the area in the next iteration.
-				if (area>MIN_OBJECT_AREA && area<MAX_OBJECT_AREA && area>refArea) {
+				if (area > MIN_OBJECT_AREA && area<MAX_OBJECT_AREA && area>refArea) {
 					x = moment.m10 / area;
 					y = moment.m01 / area;
 					objectFound = true;
 					refArea = area;
-				}
-				else objectFound = false;
 
+					//draw object location on screen
+					drawObject(x, y, cameraFeed);
+
+				}
+				else {
+					objectFound = false;
+				}
 
 			}
 			//let user know you found an object
 			if (objectFound == true) {
 				putText(cameraFeed, "Tracking Object", Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
-				//draw object location on screen
-				drawObject(x, y, cameraFeed);
 			}
 
 		}
@@ -176,16 +179,11 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 }
 
 
-void thresholdImage(Mat &thresh, int maximum, int minimum, bool hue) {
+void thresholdImage(Mat &thresh, int maximum, int minimum) {
 	Mat temp;
-	
+
 	threshold(thresh, temp, maximum, 0, THRESH_TOZERO_INV);
 	threshold(temp, thresh, minimum, 255, THRESH_BINARY);
-
-	if (hue)
-	{
-		bitwise_not(thresh, thresh);
-	}
 }
 
 int main(int argc, char* argv[])
@@ -213,9 +211,15 @@ int main(int argc, char* argv[])
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
+
+	Rect2d bbox = Rect2d(0, 400, 1280, 50); // selectROI(cameraFeed, false);
+
 	while (1) {
 		//store image to matrix
 		capture.read(cameraFeed);
+
+		cameraFeed = Mat(cameraFeed, bbox).clone();
+
 		//convert frame from BGR to HSV colorspace
 		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 		//filter HSV image between values and store filtered image to
@@ -223,14 +227,24 @@ int main(int argc, char* argv[])
 		//inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
 
 
-		vector<Mat> channel;
+		vector<Mat> channel(3);
 		Mat laser;
 
+
 		split(HSV, channel);
-		
-		thresholdImage(channel[0], H_MAX, H_MIN, true);
-		thresholdImage(channel[1], S_MAX, S_MIN, false);
-		thresholdImage(channel[2], V_MAX, V_MIN, false);
+
+		thresholdImage(channel[0], H_MAX, H_MIN);
+		bitwise_not(channel[0], channel[0]);
+		thresholdImage(channel[1], S_MAX, S_MIN);
+		thresholdImage(channel[2], V_MAX, V_MIN);
+
+		/*morphOps(channel[0]);
+		morphOps(channel[1]);
+		morphOps(channel[2]);
+*/
+		imshow("H", channel[0]);
+		imshow("S", channel[1]);
+		imshow("V", channel[2]);
 
 		merge(channel, threshold);
 
