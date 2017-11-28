@@ -26,7 +26,7 @@ int H_MIN = 20;
 int H_MAX = 160;
 int S_MIN = 100;
 int S_MAX = 255;
-int V_MIN = 80;
+int V_MIN = 120;
 int V_MAX = 256;
 int MAX = 256;
 
@@ -136,8 +136,8 @@ void morphOps(Mat &thresh) {
 
 }
 void trackFilteredObject(int &x, Mat threshold, Mat &cameraFeed) {
-	int y = 0;
-
+	int y = -1;
+	x = -1;
 	Mat temp;
 	threshold.copyTo(temp);
 	//these two vectors needed for output of findContours
@@ -172,15 +172,18 @@ void trackFilteredObject(int &x, Mat threshold, Mat &cameraFeed) {
 				}
 
 			}
-			//let user know you found an object
-			if (objectFound == true) {
-				putText(cameraFeed, "Tracking Object", Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
-				//draw object location on screen
-				drawObject(x, y, cameraFeed);
-			}
+			////let user know you found an object
+			//if (objectFound == true) {
+			//	putText(cameraFeed, "Tracking Object", Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
+			//	//draw object location on screen
+			//	drawObject(x, y, cameraFeed);
+			//}
 
 		}
-		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
+		else
+		{
+			//putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
+		}
 	}
 }
 
@@ -221,7 +224,7 @@ Mat getLaserFrame(Mat camera)
 
 	split(HSV, channel);
 
-	imshow(windowName1, HSV);
+	//imshow(windowName1, HSV);
 
 	thresholdImage(channel[0], H_MAX, H_MIN);
 	bitwise_not(channel[0], channel[0]);
@@ -250,17 +253,38 @@ Mat getLaserFrame(Mat camera)
 	return laser;
 }
 
+double toRadians(double value) {
+	return value / 180 * PI;
+}
+
+double toDeg(double value) {
+	return value / PI * 180;
+}
+
+double getCameraAngle(double value)
+{
+	double virtualCameraConeBottomAngle = (180.0 - 67.309) / 2.0;
+	double virtualCameraConeBottomAngleRad = toRadians(virtualCameraConeBottomAngle);
+	double virtualCameraConeBottomLength = 1.084;
+	double detectedPointPositionOnVirtualCameraCone = value / 1280.0 * virtualCameraConeBottomLength;
+
+	double topFormula = sin(virtualCameraConeBottomAngleRad) * detectedPointPositionOnVirtualCameraCone;
+	double bottomFormula = sqrt(1 + pow(detectedPointPositionOnVirtualCameraCone, 2) - (2 * cos(virtualCameraConeBottomAngleRad) * detectedPointPositionOnVirtualCameraCone));
+
+	return asin(topFormula / bottomFormula);
+}
+
 void drawPoint(int a1, int a2) {
 	int x1 = 0;
 	int y1 = 512;
 	int x2 = 512;
 	int y2 = 512;
 
-	double alfa1 = (0.05*a1 + 64);
-	double alfa2 = (0.05*a2);
+	double alfa1 = 180.0 - (67.309 - toDeg(getCameraAngle(a1)));
+	double alfa2 = toDeg(getCameraAngle(a2));
 
-	double tan1 = tan(alfa1/180*PI);
-	double tan2 = tan(alfa2/180*PI);
+	double tan1 = tan(toRadians(alfa1));
+	double tan2 = tan(toRadians(alfa2));
 
 	double b1 = y1 - tan1*x1;
 	double b2 = y2 - tan2*x2;
@@ -268,8 +292,13 @@ void drawPoint(int a1, int a2) {
 	double x = (b2 - b1) / (tan1 - tan2);
 	double y = tan1*x + b1;
 
-	circle(table, Point(x, y), 2, Scalar(0, 255, 0), 2);
 
+	y = 512 - y;
+
+	//table = Mat(512, 512, CV_8U);
+	line(table, Point(x, y), Point(x, y), Scalar(0, 255, 0));
+	//circle(table, Point(x, y), 1, Scalar(0, 255, 0), 1);
+	//putText(table,  "A1: " + to_string(int(alfa1)) + " A2: " + to_string(int(alfa2)), Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
 	imshow("table", table);
 }
 
@@ -303,16 +332,16 @@ int main(int argc, char* argv[])
 		trackFilteredObject(a2, laser2, cameraFeed2);
 
 		//show frames 
-		imshow("Camera1", cameraFeed1);
+		/*imshow("Camera1", cameraFeed1);
 		imshow("Camera2", cameraFeed2);
 		imshow("Laser1", laser1);
 		imshow("Laser2", laser2);
-
+*/
 		drawPoint(a1, a2);
 
 		//delay 30ms so that screen can refresh.
 		//image will not appear without this waitKey() command
-		waitKey(30);
+		waitKey(10);
 	}
 
 	return 0;
