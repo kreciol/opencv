@@ -141,7 +141,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MySender.cpp" />
     <ClCompile Include="objectTracking.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MySender.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

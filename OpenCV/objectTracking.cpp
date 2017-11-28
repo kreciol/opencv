@@ -16,6 +16,8 @@
 
 #include <math.h>       /* tan */
 
+#include "MySender.h"
+
 #define PI 3.14159265
 
 using namespace std;
@@ -50,6 +52,43 @@ const string trackbarWindowName = "Trackbars";
 Rect2d bbox = Rect2d(0, 310, 1280, 20); // selectROI(cameraFeed, false);
 Mat table = Mat(512, 512, CV_8U);
 
+MySender sender;
+
+
+// ------------------------- MQTT START ---------------------------------------
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return true;
+}
+
+void sendLineTo(int x, int y) {
+	std::string message("{\"type\":\"line\",\"data\" : {\"x\" : $xPos,\"y\" : $yPos}}");
+	std::string xPos = std::to_string(x);
+	replace(message, "$xPos", xPos);
+	std::string yPos = std::to_string(y);
+	replace(message, "$yPos", yPos);
+	sender.sendMessage(message.c_str());
+}
+
+void sendMoveTo(int x, int y) {
+	std::string message("{\"type\":\"move\",\"data\" : {\"x\" : $xPos,\"y\" : $yPos}}");
+	std::string xPos = std::to_string(x);
+	replace(message, "$xPos", xPos);
+	std::string yPos = std::to_string(y);
+	replace(message, "$yPos", yPos);
+	sender.sendMessage(message.c_str());
+}
+
+void sendClear() {
+	std::string message("{\"type\":\"clear\"}");
+	sender.sendMessage(message.c_str());
+}
+
+// ------------------------- MQTT END ----------------------------------------
+
 void on_trackbar(int, void*)
 {//This function gets called whenever a
  // trackbar position is changed
@@ -69,7 +108,7 @@ string intToString(int number) {
 void createTrackbars() {
 	//create window for trackbars
 
-
+	namedWindow("table");
 	namedWindow(trackbarWindowName, 0);
 	//create memory to store trackbar name on window
 	char TrackbarName[50];
@@ -203,10 +242,10 @@ VideoCapture setupCamera(int camera) {
 	capture.open(camera);
 	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
-	capture.set(CV_CAP_PROP_BRIGHTNESS, 30.0);
-	capture.set(CV_CAP_PROP_CONTRAST, 5.0);
-	capture.set(CV_CAP_PROP_SATURATION, 200.0);
-	capture.set(CV_CAP_PROP_EXPOSURE, -6.0);
+	//capture.set(CV_CAP_PROP_BRIGHTNESS, 30.0);
+	//capture.set(CV_CAP_PROP_CONTRAST, 5.0);
+	//capture.set(CV_CAP_PROP_SATURATION, 200.0);
+	//capture.set(CV_CAP_PROP_EXPOSURE, -6.0);
 	//capture.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 2500);
 	//capture.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 2500);
 	return capture;
@@ -307,6 +346,9 @@ void drawPoint(int a1, int a2) {
 
 	Point start = lastx == -1 ? Point(x, y) : Point(lastx, lasty);
 
+	//TODO;tutaj
+	sendLineTo(x, y);
+
 	line(table, start, Point(x, y), Scalar(0, 255, 0));
 	//circle(table, Point(x, y), 1, Scalar(0, 255, 0), 1);
 	//putText(table,  "A1: " + to_string(int(alfa1)) + " A2: " + to_string(int(alfa2)), Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
@@ -318,6 +360,11 @@ void drawPoint(int a1, int a2) {
 
 int main(int argc, char* argv[])
 {
+	cout << "Starting sender...\n";
+
+	sender.initialize();
+	sender.connectToServer();
+
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed1;
 	Mat cameraFeed2;
@@ -328,13 +375,14 @@ int main(int argc, char* argv[])
 	createTrackbars();
 
 	VideoCapture capture1 = setupCamera(0);
-	VideoCapture capture2 = setupCamera(1);
+	//VideoCapture capture2 = setupCamera(2);
 
 
 	while (1) {
 		//store image to matrix
 		capture1.read(cameraFeed1);
-		capture2.read(cameraFeed2);
+		cameraFeed2 = cameraFeed1.clone();
+		//capture2.read(cameraFeed2);
 
 		cameraFeed1 = Mat(cameraFeed1, bbox).clone();
 		cameraFeed2 = Mat(cameraFeed2, bbox).clone();
@@ -346,16 +394,16 @@ int main(int argc, char* argv[])
 		trackFilteredObject(a2, laser2, cameraFeed2);
 
 		//show frames 
-		/*imshow("Camera1", cameraFeed1);
+		imshow("Camera1", cameraFeed1);
 		imshow("Camera2", cameraFeed2);
 		imshow("Laser1", laser1);
 		imshow("Laser2", laser2);
-*/
+
 		drawPoint(a1, a2);
 
 		//delay 30ms so that screen can refresh.
 		//image will not appear without this waitKey() command
-		waitKey(10);
+		waitKey(30);
 	}
 
 	return 0;
