@@ -30,6 +30,9 @@ int V_MIN = 120;
 int V_MAX = 256;
 int MAX = 256;
 
+double lastx = -1;
+double lasty = -1;
+
 //default capture width and height
 const int FRAME_WIDTH = 1280;
 const int FRAME_HEIGHT = 720;
@@ -275,6 +278,12 @@ double getCameraAngle(double value)
 }
 
 void drawPoint(int a1, int a2) {
+	if (a1 < 0 || a2 < 0) {
+		lastx = -1;
+		lasty = -1;
+		return;
+	}
+
 	int x1 = 0;
 	int y1 = 512;
 	int x2 = 512;
@@ -292,14 +301,19 @@ void drawPoint(int a1, int a2) {
 	double x = (b2 - b1) / (tan1 - tan2);
 	double y = tan1*x + b1;
 
-
 	y = 512 - y;
 
 	//table = Mat(512, 512, CV_8U);
-	line(table, Point(x, y), Point(x, y), Scalar(0, 255, 0));
+
+	Point start = lastx == -1 ? Point(x, y) : Point(lastx, lasty);
+
+	line(table, start, Point(x, y), Scalar(0, 255, 0));
 	//circle(table, Point(x, y), 1, Scalar(0, 255, 0), 1);
 	//putText(table,  "A1: " + to_string(int(alfa1)) + " A2: " + to_string(int(alfa2)), Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
 	imshow("table", table);
+
+	lastx = x;
+	lasty = y;
 }
 
 int main(int argc, char* argv[])
