@@ -14,6 +14,10 @@
 #include <opencv\highgui.h>
 #include <opencv\cv.h>
 
+#include <math.h>       /* tan */
+
+#define PI 3.14159265
+
 using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
@@ -22,7 +26,7 @@ int H_MIN = 20;
 int H_MAX = 160;
 int S_MIN = 100;
 int S_MAX = 255;
-int V_MIN = 200;
+int V_MIN = 80;
 int V_MAX = 256;
 int MAX = 256;
 
@@ -40,6 +44,9 @@ const string windowName1 = "HSV Image";
 const string windowName2 = "Thresholded Image";
 const string windowName3 = "After Morphological Operations";
 const string trackbarWindowName = "Trackbars";
+Rect2d bbox = Rect2d(0, 310, 1280, 20); // selectROI(cameraFeed, false);
+Mat table = Mat(512, 512, CV_8U);
+
 void on_trackbar(int, void*)
 {//This function gets called whenever a
  // trackbar position is changed
@@ -93,7 +100,7 @@ void drawObject(int x, int y, Mat &frame) {
 	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
 
 	circle(frame, Point(x, y), 20, Scalar(0, 255, 0), 2);
-	if (y - 25 > 0)
+	/*if (y - 25 > 0)
 		line(frame, Point(x, y), Point(x, y - 25), Scalar(0, 255, 0), 2);
 	else line(frame, Point(x, y), Point(x, 0), Scalar(0, 255, 0), 2);
 	if (y + 25 < FRAME_HEIGHT)
@@ -104,7 +111,7 @@ void drawObject(int x, int y, Mat &frame) {
 	else line(frame, Point(x, y), Point(0, y), Scalar(0, 255, 0), 2);
 	if (x + 25 < FRAME_WIDTH)
 		line(frame, Point(x, y), Point(x + 25, y), Scalar(0, 255, 0), 2);
-	else line(frame, Point(x, y), Point(FRAME_WIDTH, y), Scalar(0, 255, 0), 2);
+	else line(frame, Point(x, y), Point(FRAME_WIDTH, y), Scalar(0, 255, 0), 2);*/
 
 	putText(frame, intToString(x) + "," + intToString(y), Point(x, y + 30), 1, 1, Scalar(0, 255, 0), 2);
 
@@ -114,12 +121,12 @@ void morphOps(Mat &thresh) {
 	//create structuring element that will be used to "dilate" and "erode" image.
 	//the element chosen here is a 3px by 3px rectangle
 
-	Mat erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
+	//Mat erodeElement = getStructuringElement(MORPH_RECT, Size(3, 3));
 	//dilate with larger element so make sure object is nicely visible
 	Mat dilateElement = getStructuringElement(MORPH_RECT, Size(8, 8));
 
-	erode(thresh, thresh, erodeElement);
-	erode(thresh, thresh, erodeElement);
+	//erode(thresh, thresh, erodeElement);
+	//erode(thresh, thresh, erodeElement);
 
 
 	dilate(thresh, thresh, dilateElement);
@@ -128,7 +135,8 @@ void morphOps(Mat &thresh) {
 
 
 }
-void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
+void trackFilteredObject(int &x, Mat threshold, Mat &cameraFeed) {
+	int y = 0;
 
 	Mat temp;
 	threshold.copyTo(temp);
@@ -158,10 +166,6 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 					y = moment.m01 / area;
 					objectFound = true;
 					refArea = area;
-
-					//draw object location on screen
-					drawObject(x, y, cameraFeed);
-
 				}
 				else {
 					objectFound = false;
@@ -171,6 +175,8 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 			//let user know you found an object
 			if (objectFound == true) {
 				putText(cameraFeed, "Tracking Object", Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
+				//draw object location on screen
+				drawObject(x, y, cameraFeed);
 			}
 
 		}
@@ -186,99 +192,128 @@ void thresholdImage(Mat &thresh, int maximum, int minimum) {
 	threshold(temp, thresh, minimum, 255, THRESH_BINARY);
 }
 
-int main(int argc, char* argv[])
-{
-	//some boolean variables for different functionality within this
-	//program
-	bool trackObjects = true;
-	bool useMorphOps = true;
-	//Matrix to store each frame of the webcam feed
-	Mat cameraFeed;
-	//matrix storage for HSV image
-	Mat HSV;
-	//matrix storage for binary threshold image
-	Mat threshold;
-	//x and y values for the location of the object
-	int x = 0, y = 0;
-	//create slider bars for HSV filtering
-	createTrackbars();
-	//video capture object to acquire webcam feed
+VideoCapture setupCamera(int camera) {
 	VideoCapture capture;
-	//open capture object at location zero (default location for webcam)
-	capture.open(0);
-	//set height and width of capture frame
+	capture.open(camera);
 	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
-	//start an infinite loop where webcam feed is copied to cameraFeed matrix
-	//all of our operations will be performed within this loop
+	capture.set(CV_CAP_PROP_BRIGHTNESS, 30.0);
+	capture.set(CV_CAP_PROP_CONTRAST, 5.0);
+	capture.set(CV_CAP_PROP_SATURATION, 200.0);
+	capture.set(CV_CAP_PROP_EXPOSURE, -6.0);
+	//capture.set(CV_CAP_PROP_WHITE_BALANCE_RED_V, 2500);
+	//capture.set(CV_CAP_PROP_WHITE_BALANCE_BLUE_U, 2500);
+	return capture;
+}
 
-	Rect2d bbox = Rect2d(0, 400, 1280, 50); // selectROI(cameraFeed, false);
+Mat getLaserFrame(Mat camera)
+{
+	//camera = Mat(camera, bbox).clone();
+
+	Mat HSV;
+	Mat threshold;
+
+	//convert frame from BGR to HSV colorspace
+	cvtColor(camera, HSV, COLOR_BGR2HSV);
+
+	vector<Mat> channel(3);
+
+
+	split(HSV, channel);
+
+	imshow(windowName1, HSV);
+
+	thresholdImage(channel[0], H_MAX, H_MIN);
+	bitwise_not(channel[0], channel[0]);
+	thresholdImage(channel[1], S_MAX, S_MIN);
+	thresholdImage(channel[2], V_MAX, V_MIN);
+
+	morphOps(channel[0]);
+	morphOps(channel[1]);
+	morphOps(channel[2]);
+
+	//imshow("H", channel[0]);
+	//imshow("S", channel[1]);
+	//imshow("V", channel[2]);
+
+	merge(channel, threshold);
+
+	//imshow(windowName2, threshold);
+
+
+	Mat laser;
+
+	bitwise_and(channel[0], channel[2], laser);
+
+	bitwise_and(channel[1], laser, laser);
+
+	return laser;
+}
+
+void drawPoint(int a1, int a2) {
+	int x1 = 0;
+	int y1 = 512;
+	int x2 = 512;
+	int y2 = 512;
+
+	double alfa1 = (0.05*a1 + 64);
+	double alfa2 = (0.05*a2);
+
+	double tan1 = tan(alfa1/180*PI);
+	double tan2 = tan(alfa2/180*PI);
+
+	double b1 = y1 - tan1*x1;
+	double b2 = y2 - tan2*x2;
+
+	double x = (b2 - b1) / (tan1 - tan2);
+	double y = tan1*x + b1;
+
+	circle(table, Point(x, y), 2, Scalar(0, 255, 0), 2);
+
+	imshow("table", table);
+}
+
+int main(int argc, char* argv[])
+{
+	//Matrix to store each frame of the webcam feed
+	Mat cameraFeed1;
+	Mat cameraFeed2;
+
+	//x and y values for the location of the object
+	int a1 = 0, a2 = 0;
+	//create slider bars for HSV filtering
+	createTrackbars();
+
+	VideoCapture capture1 = setupCamera(0);
+	VideoCapture capture2 = setupCamera(1);
+
 
 	while (1) {
 		//store image to matrix
-		capture.read(cameraFeed);
+		capture1.read(cameraFeed1);
+		capture2.read(cameraFeed2);
 
-		cameraFeed = Mat(cameraFeed, bbox).clone();
+		cameraFeed1 = Mat(cameraFeed1, bbox).clone();
+		cameraFeed2 = Mat(cameraFeed2, bbox).clone();
 
-		//convert frame from BGR to HSV colorspace
-		cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-		//filter HSV image between values and store filtered image to
-		//threshold matrix
-		//inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+		Mat laser1 = getLaserFrame(cameraFeed1);
+		Mat laser2 = getLaserFrame(cameraFeed2);
 
-
-		vector<Mat> channel(3);
-		Mat laser;
-
-
-		split(HSV, channel);
-
-		thresholdImage(channel[0], H_MAX, H_MIN);
-		bitwise_not(channel[0], channel[0]);
-		thresholdImage(channel[1], S_MAX, S_MIN);
-		thresholdImage(channel[2], V_MAX, V_MIN);
-
-		/*morphOps(channel[0]);
-		morphOps(channel[1]);
-		morphOps(channel[2]);
-*/
-		imshow("H", channel[0]);
-		imshow("S", channel[1]);
-		imshow("V", channel[2]);
-
-		merge(channel, threshold);
-
-		bitwise_and(channel[0], channel[2], laser);
-
-		bitwise_and(channel[1], laser, laser);
-
-
-		//perform morphological operations on thresholded image to eliminate noise
-		//and emphasize the filtered object(s)
-		//if (useMorphOps)
-		//	morphOps(laser);
-		//pass in thresholded frame to our object tracking function
-		//this function will return the x and y coordinates of the
-		//filtered object
-		if (trackObjects)
-			trackFilteredObject(x, y, laser, cameraFeed);
+		trackFilteredObject(a1, laser1, cameraFeed1);
+		trackFilteredObject(a2, laser2, cameraFeed2);
 
 		//show frames 
-		imshow(windowName2, threshold);
-		imshow(windowName, cameraFeed);
-		imshow(windowName1, HSV);
-		imshow("Laser", laser);
+		imshow("Camera1", cameraFeed1);
+		imshow("Camera2", cameraFeed2);
+		imshow("Laser1", laser1);
+		imshow("Laser2", laser2);
 
+		drawPoint(a1, a2);
 
 		//delay 30ms so that screen can refresh.
 		//image will not appear without this waitKey() command
 		waitKey(30);
 	}
-
-
-
-
-
 
 	return 0;
 }

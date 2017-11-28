@@ -21,11 +21,11 @@ const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 int main(int argc, char* argv[])
 {
 	namedWindow("Camera 1", WINDOW_AUTOSIZE);
-	//namedWindow("Camera 2", WINDOW_AUTOSIZE);
+	namedWindow("Camera 2", WINDOW_AUTOSIZE);
 
 	// Ptr<Tracker> tracker = TrackerBoosting::create();
 	// Ptr<Tracker> tracker = TrackerMIL::create();
-	Ptr<Tracker> tracker = TrackerKCF::create();
+	// Ptr<Tracker> tracker = TrackerKCF::create();
 	// Ptr<Tracker> tracker = TrackerTLD::create();
 	// Ptr<Tracker> tracker = TrackerMedianFlow::create();
 	// Ptr<Tracker> tracker = TrackerGOTURN::create();
@@ -45,42 +45,26 @@ int main(int argc, char* argv[])
 	capture2.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
 
-	for (int i = 0; i < 100; i++)
+	/*for (int i = 0; i < 100; i++)
 	{
 		capture1.read(cameraFeed1);
 		imshow("Camera 1", cameraFeed1);
-	}
+	}*/
 
-	Rect2d bbox = selectROI(cameraFeed1, false);
-	rectangle(cameraFeed1, bbox, Scalar(255, 0, 0), 2, 1);
+	//Rect2d bbox = selectROI(cameraFeed1, false);
+	//rectangle(cameraFeed1, bbox, Scalar(255, 0, 0), 2, 1);
 
-	tracker->init(cameraFeed1, bbox);
+	//tracker->init(cameraFeed1, bbox);
 
-	int x = 0, y = 0;
+	// int x = 0, y = 0;
 
 	while (1) {
 		capture1.read(cameraFeed1);
+		imshow("Camera 1", cameraFeed1);
 
 		capture2.read(cameraFeed2);
 		imshow("Camera 2", cameraFeed2);
 
-		//trackFilteredObject(x,y)
-
-		// Update the tracking result
-		bool ok = tracker->update(cameraFeed1, bbox);
-
-		if (ok)
-		{
-			// Tracking success : Draw the tracked object
-			rectangle(cameraFeed1, bbox, Scalar(255, 0, 0), 2, 1);
-		}
-		else
-		{
-			// Tracking failure detected.
-			putText(cameraFeed1, "Tracking failure detected", Point(100, 80), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0, 0, 255), 2);
-		}
-
-		imshow("Camera 1", cameraFeed1);
 
 
 		//delay 30ms so that screen can refresh.
